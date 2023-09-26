@@ -10,7 +10,7 @@ import os
 
 
 def ddp_setup():
-    init_process_group(backend="nccl")          # 初始化进程组,torchrun会自动分配GPU
+    init_process_group(backend="nccl")                      # 初始化进程组,torchrun会自动分配GPU
     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))    # 设置当前node的gpu编号
 
 class Trainer:
@@ -32,7 +32,7 @@ class Trainer:
         self.snapshot_path = snapshot_path
         if os.path.exists(snapshot_path):
             print("Loading snapshot")
-            self._load_snapshot(snapshot_path)
+            self._load_snapshot(snapshot_path)                  # 加载已经存在的权重
 
         self.model = DDP(self.model, device_ids=[self.gpu_id])
 
