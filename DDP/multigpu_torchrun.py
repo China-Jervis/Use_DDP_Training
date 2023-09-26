@@ -37,10 +37,10 @@ class Trainer:
         self.model = DDP(self.model, device_ids=[self.gpu_id])
 
     def _load_snapshot(self, snapshot_path):
-        loc = f"cuda:{self.gpu_id}"
-        snapshot = torch.load(snapshot_path, map_location=loc)
-        self.model.load_state_dict(snapshot["MODEL_STATE"])
-        self.epochs_run = snapshot["EPOCHS_RUN"]
+        loc = f"cuda:{self.gpu_id}"                                 # 设置为torch.device格式
+        snapshot = torch.load(snapshot_path, map_location=loc)      # 将权重加载到进程对应的gpu
+        self.model.load_state_dict(snapshot["MODEL_STATE"])         # 加载模型权重
+        self.epochs_run = snapshot["EPOCHS_RUN"]                    # 权重保存时的epoch，可以继续上次训练
         print(f"Resuming training from snapshot at Epoch {self.epochs_run}")
 
     def _run_batch(self, source, targets):
@@ -54,12 +54,14 @@ class Trainer:
         b_sz = len(next(iter(self.train_data))[0])
         print(f"[GPU{self.gpu_id}] Epoch {epoch} | Batchsize: {b_sz} | Steps: {len(self.train_data)}")
         self.train_data.sampler.set_epoch(epoch)
+
         for source, targets in self.train_data:
             source = source.to(self.gpu_id)
             targets = targets.to(self.gpu_id)
             self._run_batch(source, targets)
 
     def _save_snapshot(self, epoch):
+        # torch.save保存的信息
         snapshot = {
             "MODEL_STATE": self.model.module.state_dict(),
             "EPOCHS_RUN": epoch,
@@ -70,6 +72,7 @@ class Trainer:
     def train(self, max_epochs: int):
         for epoch in range(self.epochs_run, max_epochs):
             self._run_epoch(epoch)
+            # 只在master进程和设置的保存间隔保存模型
             if self.gpu_id == 0 and epoch % self.save_every == 0:
                 self._save_snapshot(epoch)
 
@@ -109,3 +112,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     main(args.save_every, args.total_epochs, args.batch_size)
+
+    # torchrun --standalone --nnodes --nproc-per-node multigpu_torchrun.py
