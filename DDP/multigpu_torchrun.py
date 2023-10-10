@@ -113,4 +113,4 @@ if __name__ == "__main__":
     
     main(args.save_every, args.total_epochs, args.batch_size)
 
-    # torchrun --standalone --nnodes --nproc-per-node multigpu_torchrun.py
+    # torchrun --standalone --nnodes --nproc-per-node 2 multigpu_torchrun.py
